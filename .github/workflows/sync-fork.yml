@@ -16,6 +16,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set Git environment variables
+        run: |
+          echo "GIT_TERMINAL_PROMPT=0" >> $GITHUB_ENV
+
       - name: Set up Git user
         run: |
           git config user.name "GitHub Actions"
@@ -25,10 +29,34 @@ jobs:
         run: |
           git config --global credential.helper store
           echo "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com" > ~/.git-credentials
+
+          # 修改 .gitmodules 檔案，改用包含令牌的 HTTPS URL
+          sed -i 's|git@github.com:n8n-io/mkdocs-material-insiders.git|https://github.com/n8n-io/mkdocs-material-insiders.git|g' .gitmodules
+
+          # 確保本機配置已更新
           git config --file=.gitmodules submodule._submodules/insiders.url https://github.com/n8n-io/mkdocs-material-insiders.git
           git submodule sync
-          git submodule deinit --all --force
-          git submodule update --init --recursive
+
+          # 直接使用包含令牌的 URL 更新 git 配置
+          git config submodule._submodules/insiders.url "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/n8n-io/mkdocs-material-insiders.git"
+          git submodule sync
+
+          # 清理並更新 submodule (加入詳細模式，顯示更多日誌)
+          echo "執行 submodule 清理..."
+          git -c protocol.https.allow=always -c core.sshCommand="ssh -v" submodule deinit --all --force
+          echo "執行 submodule 更新..."
+          git -c protocol.https.allow=always -c core.sshCommand="ssh -v" submodule update --init --recursive
+
+      - name: Check submodule status
+        run: |
+          echo "Submodule status:"
+          git submodule status
+          echo "Submodule configuration:"
+          git config --list | grep submodule
+          echo ".gitmodules content:"
+          cat .gitmodules
+          echo "Checking if directory exists:"
+          ls -la _submodules/
 
       - name: Sync with upstream
         run: |
