@@ -15,6 +15,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          submodules: "false" # 不拉取 submodules
 
       - name: Set Git environment variables
         run: |
@@ -25,45 +26,21 @@ jobs:
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
 
-      - name: Update submodule URL with token
+      - name: Sync with upstream (只更新 docs 資料夾)
         run: |
-          git config --global credential.helper store
-          echo "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com" > ~/.git-credentials
-
-          # 修改 .gitmodules 檔案，改用包含令牌的 HTTPS URL
-          sed -i 's|git@github.com:n8n-io/mkdocs-material-insiders.git|https://github.com/n8n-io/mkdocs-material-insiders.git|g' .gitmodules
-
-          # 確保本機配置已更新
-          git config --file=.gitmodules submodule._submodules/insiders.url https://github.com/n8n-io/mkdocs-material-insiders.git
-          git submodule sync
-
-          # 直接使用包含令牌的 URL 更新 git 配置
-          git config submodule._submodules/insiders.url "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/n8n-io/mkdocs-material-insiders.git"
-          git submodule sync
-
-          # 清理並更新 submodule (加入詳細模式，顯示更多日誌)
-          echo "執行 submodule 清理..."
-          git -c protocol.https.allow=always -c core.sshCommand="ssh -v" submodule deinit --all --force
-          echo "執行 submodule 更新..."
-          git -c protocol.https.allow=always -c core.sshCommand="ssh -v" submodule update --init --recursive
-
-      - name: Check submodule status
-        run: |
-          echo "Submodule status:"
-          git submodule status
-          echo "Submodule configuration:"
-          git config --list | grep submodule
-          echo ".gitmodules content:"
-          cat .gitmodules
-          echo "Checking if directory exists:"
-          ls -la _submodules/
-
-      - name: Sync with upstream
-        run: |
+          # 添加上游遠端儲存庫
           git remote add upstream https://github.com/n8n-io/n8n-docs.git
           git fetch upstream
+
+          # 切換到主分支
           git checkout main
-          git merge upstream/main --allow-unrelated-histories
+
+          # 僅更新 docs 資料夾，忽略 submodules 和其他文件
+          git checkout upstream/main -- docs
+
+          # 提交變更
+          git add docs
+          git commit -m "Sync docs folder from upstream" || echo "沒有變更需要提交"
 
       - name: Push to origin
         run: |
