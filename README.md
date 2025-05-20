@@ -69,4 +69,3 @@ If you have problems or questions, head to n8n's forum: https://community.n8n.io
 n8n-docs is [fair-code](https://faircode.io/) licensed under the [**Sustainable Use License**](https://github.com/n8n-io/n8n/blob/master/LICENSE.md).
 
 More information about the license is available in the [License documentation](https://docs.n8n.io/reference/license/).
-test
